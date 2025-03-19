@@ -12,16 +12,16 @@ from Data.Email.emailDomains import email_domains
 #--------------- Constants ---------------#
 
 COLUMN_TYPES = {
-    "rn": "Random Number",
-    "rs": "Random String",
-    "rd": "Random Date",
-    "rl": "Random from List",
-    "rfln": "Random Full Name",
-    "rfin": "Random First Name",
-    "rln": "Random Last Name",
-    "re": "Random Email",
-    "rp": "Random Phone Number",
-    "b": "Boolean"
+    "num": "Random Number",
+    "str": "Random String",
+    "date": "Random Date",
+    "list": "Random from List",
+    "fullname": "Random Full Name",
+    "fname": "Random First Name",
+    "lname": "Random Last Name",
+    "email": "Random Email",
+    "phone": "Random Phone Number",
+    "bool": "Boolean"
 }
 
 #--------------- Style ---------------#
@@ -62,16 +62,16 @@ def create_column():
 
     row_type = input("Column Type: ").lower().strip()
     
-    if row_type in ["rn", "rs", "rd"]:
-        min_val, max_val = get_min_max(row_type)
-        return {"name": name, "type": row_type, "min": min_val, "max": max_val}
+    if row_type in ["num", "str", "date"]:
+        min_val, max_val, decimal_places = get_min_max(row_type)
+        return {"name": name, "type": row_type, "min": min_val, "max": max_val, "decimal": decimal_places}
     
-    elif row_type == "rl":
+    elif row_type == "list":
         print("Enter your list of values separated by commas and without spaces (unless you want it)")
         lst = [item.strip() for item in input("Your elements: ").split(",")]
         return {"name": name, "type": row_type, "list": lst}
     
-    elif row_type in ["rfln", "rfin", "rln", "re", "rp", "b"]:
+    elif row_type in ["fullname", "fname", "lname", "email", "phone", "bool"]:
         return {"name": name, "type": row_type}
     
     else:
@@ -79,25 +79,41 @@ def create_column():
         return None
 
 def get_min_max(row_type):
+    decimal_places = None
     while True:
         try:
-            if row_type == "rn":
-                min_val = int(input("Min value: "))
-                max_val = int(input("Max value: "))
+            if row_type == "num":
+                print("int or float, for a float at least one of the inputs must be a float")
+                min_val = input("Min value: ")
+                max_val = input("Max value: ")
+                try :
+                    min_val = int(min_val)
+                    max_val = int(max_val)
+                except ValueError:
+                    try:
+                        min_val = float(min_val)
+                        max_val = float(max_val)
+                        decimal_places = int(input("Number of decimal places (max 15): "))
+
+                        if decimal_places < 0 or decimal_places > 15:
+                            raise ValueError("Invalid number of decimal places. Must be between 0 and 15.")
+                        
+                    except ValueError:
+                        raise ValueError("Invalid input. Please enter numeric values.")
             
-            elif row_type == "rd":
+            elif row_type == "date":
                 print("Date format: yyyy-mm-dd")
                 min_val = input("Min date: ").strip()
                 max_val = input("Max date: ").strip()
             
-            else:
+            elif row_type == "str":
                 min_val = int(input("Min letters: "))
                 max_val = int(input("Max letters: "))
 
             if min_val > max_val:
                 raise ValueError("Min value must be <= Max value.")
             
-            return min_val, max_val
+            return min_val, max_val, decimal_places
 
         except ValueError as e:
             print(f"Invalid input: {e}")
@@ -110,45 +126,43 @@ def generate_datetime(min_date_str, max_date_str):
     return min_date + timedelta(seconds=random_seconds)
 
 def generate_value(column):
-    if column["type"] == "rn":
-        return str(random.randint(column["min"], column["max"]))
+    if column["type"] == "num":
+        if isinstance(column["min"], int) and isinstance(column["max"], int):
+            return str(random.randint(column["min"], column["max"]))
+        else:
+            return str(round(random.uniform(column["min"], column["max"]), column["decimal"]))
     
-    elif column["type"] == "rs":
+    elif column["type"] == "string":
         length = random.randint(column["min"], column["max"])
         return str(''.join(random.choices(string.ascii_lowercase, k=length)))
     
-    elif column["type"] == "rd":
+    elif column["type"] == "date":
         return str(generate_datetime(column['min'], column['max']))
     
-    elif column["type"] == "rl":
+    elif column["type"] == "list":
         return str(random.choice(column['list']))
     
-    elif column["type"] == "rfln":
-        return str(random.choice([random.choice(male_names), random.choice(female_names)]) + " " + random.choice(last_names))
+    elif column["type"] == "fullname":
+        return str(random.choice(male_names + female_names) + " " + random.choice(last_names))
     
-    elif column["type"] == "rfin":
-        return str(random.choice([random.choice(male_names), random.choice(female_names)]))
-    
-    elif column["type"] == "rln":
-        return str(random.choice(last_names))
+    elif column["type"] == "fname":
+        return str(random.choice(male_names + female_names))
     
     elif column["type"] == "rln":
         return str(random.choice(last_names))
     
-    elif column["type"] == "re":
+    elif column["type"] == "email":
         return str(
-            random.choice(
-                [random.choice(male_names), random.choice(female_names)]
-            )
+            random.choice(male_names + female_names)
             + "."
             + random.choice(last_names)
             + random.choice(email_domains)
         )
 
-    elif column["type"] == "rp":
+    elif column["type"] == "phone":
         return str("0" + str(random.randint(1, 7)) + "".join(random.choices(string.digits, k=8)))
     
-    elif column["type"] == "b":
+    elif column["type"] == "bool":
         return str(random.randint(0, 1))
 
 def create_table(table_name, columns, row_count):
