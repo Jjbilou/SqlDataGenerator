@@ -11,6 +11,7 @@ from Data.Email.emailDomains import email_domains
 
 # --------------- Constants ---------------#
 
+# Dictionary that defines the available column types and their meanings
 COLUMN_TYPES = {
     "num": "Random Number",
     "str": "Random String",
@@ -46,6 +47,7 @@ def start():
     table_name = input("The name of your table: ").strip()
     columns = []
 
+    # Loop to allow the user to create multiple columns
     while input("Create a new column? (y/n): ").lower() == "y":
         column = create_column()
         if column:
@@ -56,17 +58,20 @@ def start():
     print_section("Data generation complete! Check 'data.sql'")
 
 
+# Return "column" who is a dictionary with the name, the type and any other specific elements
 def create_column():
     print_section("Define a New Column")
     name = input("Column Name: ").strip()
     print_title("Column types")
 
+    # Display all available column choices
     for key, value in COLUMN_TYPES.items():
         print(f" • {value} ({key})")
     print("=" * 50)
 
     row_type = input("Column Type: ").lower().strip()
 
+    # Handle numeric, string, and date types, require min/max
     if row_type in ["num", "str", "date"]:
         min_val, max_val, decimal_places = get_min_max(row_type)
         return {
@@ -77,6 +82,7 @@ def create_column():
             "decimal": decimal_places,
         }
 
+    # Handle list type user-defined values
     elif row_type == "list":
         print(
             "Enter your list of values separated by commas and without spaces (unless you want it)"
@@ -84,6 +90,7 @@ def create_column():
         lst = [item.strip() for item in input("Your elements: ").split(",")]
         return {"name": name, "type": row_type, "list": lst}
 
+    # Handle types that don't need extra configuration
     elif row_type in ["fullname", "fname", "lname", "email", "phone", "bool"]:
         return {"name": name, "type": row_type}
 
@@ -96,6 +103,7 @@ def get_min_max(row_type):
     decimal_places = None
     while True:
         try:
+            # if min or max or both are float, ask for decimal places.
             if row_type == "num":
                 print(
                     "int or float, for a float at least one of the inputs must be a float"
@@ -138,16 +146,19 @@ def get_min_max(row_type):
         except ValueError as e:
             print(f"Invalid input: {e}")
 
-
 def generate_datetime(min_date_str, max_date_str):
+    # Convert min and max date strings into datetime objects
     min_date = datetime.strptime(min_date_str, "%Y-%m-%d")
     max_date = datetime.strptime(max_date_str, "%Y-%m-%d")
+
+    # Calculate the total time difference and generate a random number of seconds within that time range
     delta = max_date - min_date
     random_seconds = random.randint(0, int(delta.total_seconds()))
     return min_date + timedelta(seconds=random_seconds)
 
 
 def generate_value(column):
+    # If min and max are int generate a random int, esle, generate a random float
     if column["type"] == "num":
         if isinstance(column["min"], int) and isinstance(column["max"], int):
             return str(random.randint(column["min"], column["max"]))
@@ -156,7 +167,7 @@ def generate_value(column):
                 round(random.uniform(column["min"], column["max"]), column["decimal"])
             )
 
-    elif column["type"] == "string":
+    elif column["type"] == "str":
         length = random.randint(column["min"], column["max"])
         return str("".join(random.choices(string.ascii_lowercase, k=length)))
 
@@ -177,6 +188,7 @@ def generate_value(column):
     elif column["type"] == "rln":
         return str(random.choice(last_names))
 
+    # Generate a random email like "firstname.lastname@email.domains"
     elif column["type"] == "email":
         return str(
             random.choice(male_names + female_names)
@@ -184,7 +196,8 @@ def generate_value(column):
             + random.choice(last_names)
             + random.choice(email_domains)
         )
-
+    
+    # Generate the two first digits between 01 and 07, the others are fully random
     elif column["type"] == "phone":
         return str(
             "0"
@@ -197,26 +210,30 @@ def generate_value(column):
 
 
 def create_table(table_name, columns, row_count):
+    # Record the starting time for performance tracking
     start_time = time.time()
 
-    column_names = ", ".join(col["name"] for col in columns)
+    # Prepare the column names
+    column_names = "`, `".join(col["name"] for col in columns)
 
+    # Open the file data.sql, "w" is for 
     with open("data.sql", "w") as f:
         for _ in range(row_count):
             try:
-                values = ", ".join(generate_value(col) for col in columns)
+                values = "`, `".join(generate_value(col) for col in columns)
                 query = (
-                    f"INSERT INTO `{table_name}` ({column_names}) VALUES ({values});\n"
+                    f"INSERT INTO `{table_name}` (`{column_names}`) VALUES (`{values}`);\n"
                 )
                 f.write(query)
+            # Error if you enter something that can't be write.
             except UnicodeEncodeError as e:
                 print(f"Encode Error with: {values}")
                 print(f"Error: {e}")
                 continue
 
-    print_section("SQL File Created")
+    print_title("SQL File Created")
     end_time = time.time()
-    print(f"[TIME] {end_time - start_time}")
+    print(f"[TIME] : {end_time - start_time}")
 
 
 start()
