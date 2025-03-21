@@ -146,6 +146,7 @@ def get_min_max(row_type):
         except ValueError as e:
             print(f"Invalid input: {e}")
 
+
 def generate_datetime(min_date_str, max_date_str):
     # Convert min and max date strings into datetime objects
     min_date = datetime.strptime(min_date_str, "%Y-%m-%d")
@@ -169,7 +170,7 @@ def generate_value(column):
 
     elif column["type"] == "str":
         length = random.randint(column["min"], column["max"])
-        return str("".join(random.choices(string.ascii_lowercase, k=length)))
+        return "".join(random.choices(string.ascii_lowercase, k=length))
 
     elif column["type"] == "date":
         return str(generate_datetime(column["min"], column["max"]))
@@ -178,9 +179,7 @@ def generate_value(column):
         return str(random.choice(column["list"]))
 
     elif column["type"] == "fullname":
-        return str(
-            random.choice(male_names + female_names) + " " + random.choice(last_names)
-        )
+        return f"{random.choice(male_names + female_names)} {random.choice(last_names)}"
 
     elif column["type"] == "fname":
         return str(random.choice(male_names + female_names))
@@ -190,20 +189,11 @@ def generate_value(column):
 
     # Generate a random email like "firstname.lastname@email.domains"
     elif column["type"] == "email":
-        return str(
-            random.choice(male_names + female_names)
-            + "."
-            + random.choice(last_names)
-            + random.choice(email_domains)
-        )
-    
+        return f"{random.choice(male_names + female_names)}.{random.choice(last_names)}{random.choice(email_domains)}"
+
     # Generate the two first digits between 01 and 07, the others are fully random
     elif column["type"] == "phone":
-        return str(
-            "0"
-            + str(random.randint(1, 7))
-            + "".join(random.choices(string.digits, k=8))
-        )
+        return f"0{random.randint(1, 7)}{''.join(random.choices(string.digits, k=8))}"
 
     elif column["type"] == "bool":
         return str(random.randint(0, 1))
@@ -216,14 +206,12 @@ def create_table(table_name, columns, row_count):
     # Prepare the column names
     column_names = "`, `".join(col["name"] for col in columns)
 
-    # Open the file data.sql, "w" is for 
+    # Open the file data.sql, "w" is for
     with open("data.sql", "w") as f:
         for _ in range(row_count):
             try:
                 values = "`, `".join(generate_value(col) for col in columns)
-                query = (
-                    f"INSERT INTO `{table_name}` (`{column_names}`) VALUES (`{values}`);\n"
-                )
+                query = f"INSERT INTO `{table_name}` (`{column_names}`) VALUES (`{values}`);\n"
                 f.write(query)
             # Error if you enter something that can't be write.
             except UnicodeEncodeError as e:
