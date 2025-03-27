@@ -14,6 +14,7 @@ from Data.Email.emailDomains import email_domains
 # Dictionary that defines the available column types and their meanings
 COLUMN_TYPES = {
     "num": "Random Number",
+    "uniquenum": "Unique Random Number",
     "str": "Random String",
     "date": "Random Date",
     "list": "Random from List",
@@ -72,7 +73,7 @@ def create_column():
     row_type = input("Column Type: ").lower().strip()
 
     # Handle numeric, string, and date types, require min/max
-    if row_type in ["num", "str", "date"]:
+    if row_type in ["num", "uniquenum", "str", "date"]:
         min_val, max_val, decimal_places = get_min_max(row_type)
         return {
             "name": name,
@@ -104,7 +105,7 @@ def get_min_max(row_type):
     while True:
         try:
             # if min or max or both are float, ask for decimal places.
-            if row_type == "num":
+            if row_type in ["num", "uniquenum"]:
                 print(
                     "int or float, for a float at least one of the inputs must be a float"
                 )
@@ -157,8 +158,7 @@ def generate_datetime(min_date_str, max_date_str):
     random_seconds = random.randint(0, int(delta.total_seconds()))
     return min_date + timedelta(seconds=random_seconds)
 
-
-def generate_value(column):
+def generate_value(column, used_uniquenums):
     # If min and max are int generate a random int, esle, generate a random float
     if column["type"] == "num":
         if isinstance(column["min"], int) and isinstance(column["max"], int):
@@ -167,6 +167,20 @@ def generate_value(column):
             return str(
                 round(random.uniform(column["min"], column["max"]), column["decimal"])
             )
+
+    if column["type"] == "uniquenum":
+        if isinstance(column["min"], int) and isinstance(column["max"], int):
+            while True:
+                value = random.randint(column["min"], column["max"])
+                if value not in used_uniquenums[column["name"]]:
+                    used_uniquenums[column["name"]].add(value)
+                    return str(value)
+        else:
+            while True:
+                value = round(random.uniform(column["min"], column["max"]), column["decimal"])
+                if value not in used_uniquenums[column["name"]]:
+                    used_uniquenums[column["name"]].add(value)
+                    return str(value)
 
     elif column["type"] == "str":
         length = random.randint(column["min"], column["max"])
@@ -206,11 +220,15 @@ def create_table(table_name, columns, row_count):
     # Prepare the column names
     column_names = "`, `".join(col["name"] for col in columns)
 
+    used_uniquenums = {col["name"]: set() for col in columns if col["type"] == "uniquenum"}
+
     # Open the file data.sql, "w" is for
     with open("data.sql", "w") as f:
         for _ in range(row_count):
             try:
-                values = "`, `".join(generate_value(col) for col in columns)
+                values = "`, `".join(
+                    generate_value(col, used_uniquenums) for col in columns
+                )
                 query = f"INSERT INTO `{table_name}` (`{column_names}`) VALUES (`{values}`);\n"
                 f.write(query)
             # Error if you enter something that can't be write.
