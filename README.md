@@ -8,6 +8,7 @@ Credit is not required but would be appreciated
 ## Features
 
 - Random Number (Int and Float)
+- Random Unique Number (Int and Float)
 - Random String
 - Random Date
 - Random from List
